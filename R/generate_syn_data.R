@@ -900,7 +900,7 @@ generate_spots = function(region_oi, region_assignments, seurat_obj, visium_mean
     }
   }
 
-  count_matrix = as.matrix(seurat_obj[["RNA"]]@counts)
+  count_matrix = as.matrix(seurat_obj[["RNA"]]@layers$counts) ###jaychowcl: Updated @counts to @layers$counts for Seruat v5 compatibility 
   metadata = seurat_obj@meta.data
   metadata = metadata %>% tibble::rownames_to_column("cell_id") %>% tibble::as_tibble()
 
