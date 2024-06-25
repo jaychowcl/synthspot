@@ -900,7 +900,23 @@ generate_spots = function(region_oi, region_assignments, seurat_obj, visium_mean
     }
   }
 
+  ##################  vvv JAYCHOWCL vvv  ##################
+  v3_v5 = Version(seurat_obj)
+  v3_v5 = substr(v3_v5, start = 1, stop = 1) ###jaychowcl: Added a version check for Seurat v5 compatibility
+
+  if(v3_v5 == '3'){
+    count_matrix = as.matrix(seurat_obj[["RNA"]]@counts)
+  }
+
+  if(v3_v5 == '5'){
   count_matrix = as.matrix(seurat_obj[["RNA"]]@layers$counts) ###jaychowcl: Updated @counts to @layers$counts for Seruat v5 compatibility 
+  colnames(count_matrix) = Cells(seurat_obj)
+  rownames(count_matrix) = Features(seurat_obj)
+  }
+  
+
+  ##################  ^^^ JAYCHOWCL ^^^ ##################
+  
   metadata = seurat_obj@meta.data
   metadata = metadata %>% tibble::rownames_to_column("cell_id") %>% tibble::as_tibble()
 
