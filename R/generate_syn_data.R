@@ -4,7 +4,7 @@
 #' Via this functions you can generate different 'tissue types' by changing the way the cell type frequencies are defined. Read the argument description of `dataset_type` for seeing the different tissue type options.
 #' If your scRNAseq data object already provides information about the region/location a cell was sampled from, you could use this information as well to generate synthetic Visium data that will only pool cells together if they originate from the same region.
 #' @usage
-#' make_region_celltype_assignment(seurat_obj, clust_var, n_regions, dataset_type, region_var = NULL, dataset_id = "1", n_spots_min = 50, n_spots_max = 500, select_celltype = NULL)
+#' make_region_celltype_assignment(seurat_obj, clust_var, n_regions, dataset_type, region_var = "NULL", dataset_id = "1", n_spots_min = 50, n_spots_max = 500, select_celltype = "random")
 #'
 #' @param seurat_obj The input scRNAseq data stored as Seurat object.
 #' @param clust_var Name of the meta data column in which the cell type label of interest is defined.
@@ -31,7 +31,7 @@
 #' "artificial_regional_rare_celltype_diverse": the same as 'artificial_dominant_rare_celltype_diverse', except that the rare cell type is now only present in one region instead of all regions.\cr \cr
 #' "artificial_diverse_distinct_missing_celltype_sc": the same as 'artificial_diverse_distinct' except that one random cell type will be removed from the reference scRNAseq dataset at time of integration and evaluation. This to resemble a case where integration is done with an incomplete reference. \cr \cr
 #' "artificial_diverse_overlap_missing_celltype_sc": the same as 'artificial_diverse_overlap' except that one random cell type will be removed from the reference scRNAseq dataset at time of integration and evaluation. This to resemble a case where integration is done with an incomplete reference. \cr \cr
-#' @param select_celltype jaychowcl: User defined celltype for: (set to NULL for random sampling) \cr \cr
+#' @param select_celltype jaychowcl: User defined celltype for: (set to "random" for random sampling) \cr \cr
 #' "artificial_dominant_celltype_diverse": dominant_celltype \cr \cr
 #' "artificial_partially_dominant_celltype_diverse": dominant_celltype \cr \cr
 #' "artificial_diverse_distinct_missing_celltype_sc": missing_celltype_sc \cr \cr
@@ -51,13 +51,13 @@
 #' @examples
 #' \dontrun{
 #' library(Seurat)
-#' region_assignment = make_region_celltype_assignment(seurat_obj = seurat_obj, clust_var = "subclass", n_regions = 5, dataset_type = "artificial_missing_celltypes_visium")
+#' region_assignment = make_region_celltype_assignment(seurat_obj = seurat_obj, clust_var = "subclass", n_regions = 5, dataset_type = "artificial_missing_celltypes_visium", select_celltype = "random")
 #' }
 #'
 #' @export
 #'
 #' 
-make_region_celltype_assignment = function(seurat_obj, clust_var, n_regions, dataset_type, region_var = NULL, dataset_id = "1", n_spots_min = 50, n_spots_max = 500, select_celltype = NULL){ #jaychowcl: added select_celltype argument
+make_region_celltype_assignment = function(seurat_obj, clust_var, n_regions, dataset_type, region_var = NULL, dataset_id = "1", n_spots_min = 50, n_spots_max = 500, select_celltype = "random"){ #jaychowcl: added select_celltype argument
 
   requireNamespace("dplyr")
   requireNamespace("Seurat")
@@ -134,8 +134,8 @@ make_region_celltype_assignment = function(seurat_obj, clust_var, n_regions, dat
   seurat_obj$seurat_clusters_oi = droplevels(seurat_obj@meta.data[,clust_var] %>% as.factor())
   celltypes = unique(seurat_obj$seurat_clusters_oi)
 
-  if(select_celltype != NULL & !is.element(select_celltype, celltypes)){ #jaychowcl: added check for select_celltype
-    stop("Selected celltype should be an available celltype within the scRNA dataset")
+  if(select_celltype != "random" & !is.element(select_celltype, celltypes)){ #jaychowcl: added check for select_celltype
+    stop("Selected celltype should be an available celltype within the scRNA dataset, or set to 'random' for random sampling.")
   }
 
   if(!is.null(region_var)){
@@ -446,7 +446,7 @@ make_region_celltype_assignment = function(seurat_obj, clust_var, n_regions, dat
   if (dataset_type == "artificial_dominant_celltype_diverse"){ # one cell type has significant higher frequency over all regions - difference in regions determined by other cell types. Some cell types in more than one region.
 
     ##################  vvv JAYCHOWCL vvv  ##################
-    if(select_celltype != NULL){ # allows user chosen dominant celltype
+    if(select_celltype != "random"){ # allows user chosen dominant celltype
       dominant_celltype = select_celltype
     }
     else{
@@ -488,7 +488,7 @@ make_region_celltype_assignment = function(seurat_obj, clust_var, n_regions, dat
   if (dataset_type == "artificial_partially_dominant_celltype_diverse"){ # one cell type has significant higher frequency over all regions - difference in regions determined by other cell types. Some cell types in more than one region.
 
     ##################  vvv JAYCHOWCL vvv  ##################
-    if(select_celltype != NULL){
+    if(select_celltype != "random"){
       dominant_celltype = select_celltype
     }
     else{
@@ -579,7 +579,7 @@ make_region_celltype_assignment = function(seurat_obj, clust_var, n_regions, dat
   if (dataset_type == "artificial_diverse_distinct_missing_celltype_sc"){ #  every region consists of different cell types, frequency random
 
     ##################  vvv JAYCHOWCL vvv  ##################
-    if(select_celltype != NULL){
+    if(select_celltype != "random"){
       missing_celltype_sc = select_celltype
     }
     else{
@@ -620,7 +620,7 @@ make_region_celltype_assignment = function(seurat_obj, clust_var, n_regions, dat
   if (dataset_type == "artificial_diverse_overlap_missing_celltype_sc"){ # every region consists of different cell types, but some overlap and replacement is possible - frequency of cell types will be random
 
     ##################  vvv JAYCHOWCL vvv  ##################
-    if(select_celltype != NULL){
+    if(select_celltype != "random"){
       missing_celltype_sc = select_celltype
     }
     else{
@@ -664,7 +664,7 @@ make_region_celltype_assignment = function(seurat_obj, clust_var, n_regions, dat
   if (dataset_type == "artificial_dominant_rare_celltype_diverse"){ # one cell type that is present over all regions, but in low frequency - difference in regions determined by other cell types. Some cell types in more than one region.
 
     ##################  vvv JAYCHOWCL vvv  ##################
-    if(select_celltype != NULL){
+    if(select_celltype != "random"){
       dominant_celltype = select_celltype
     }
     else{
@@ -706,7 +706,7 @@ make_region_celltype_assignment = function(seurat_obj, clust_var, n_regions, dat
   if (dataset_type == "artificial_regional_rare_celltype_diverse"){ # one cell type that is present over all regions, but in low frequency - difference in regions determined by other cell types. Some cell types in more than one region.
 
     ##################  vvv JAYCHOWCL vvv  ##################
-    if(select_celltype != NULL){
+    if(select_celltype != "random"){
       rare_celltype = select_celltype
     }
     else{
@@ -1089,7 +1089,7 @@ generate_spots = function(region_oi, region_assignments, seurat_obj, visium_mean
 #' If your scRNAseq data object already provides information about the region/location a cell was sampled from, you could use this information as well to generate synthetic Visium data that will only pool cells together if they originate from the same region. \cr
 #'
 #' @usage
-#' generate_synthetic_visium(seurat_obj, dataset_type, clust_var, n_regions, region_var = NULL, dataset_id = "1", n_spots_min = 50, n_spots_max = 500, visium_mean = 20000, visium_sd = 7000, n_cells_min = 2, n_cells_max = 10, add_mock_region = FALSE, sc_rnaseq_path = NA)
+#' generate_synthetic_visium(seurat_obj, dataset_type, clust_var, n_regions, region_var = NULL, dataset_id = "1", n_spots_min = 50, n_spots_max = 500, visium_mean = 20000, visium_sd = 7000, n_cells_min = 2, n_cells_max = 10, add_mock_region = FALSE, sc_rnaseq_path = NA, select_celltype = "random")
 #'
 #' @inheritParams make_region_celltype_assignment
 #' @inheritParams region_assignment_to_syn_data
@@ -1109,12 +1109,12 @@ generate_spots = function(region_oi, region_assignments, seurat_obj, visium_mean
 #' @examples
 #' \dontrun{
 #' library(Seurat)
-#' synthetic_visium_data = generate_synthetic_visium(seurat_obj = seurat_obj, dataset_type = "artificial_missing_celltypes_visium", clust_var = "subclass", n_regions = 5)
+#' synthetic_visium_data = generate_synthetic_visium(seurat_obj = seurat_obj, dataset_type = "artificial_missing_celltypes_visium", clust_var = "subclass", n_regions = 5, select_celltype = "random")
 #' }
 #'
 #' @export
 #'
-generate_synthetic_visium = function(seurat_obj, dataset_type, clust_var, n_regions, region_var = NULL, dataset_id = "1", n_spots_min = 50, n_spots_max = 500, visium_mean = 20000, visium_sd = 7000, n_cells_min = 2, n_cells_max = 10, add_mock_region = FALSE, sc_rnaseq_path = NA, select_celltype = NULL){
+generate_synthetic_visium = function(seurat_obj, dataset_type, clust_var, n_regions, region_var = NULL, dataset_id = "1", n_spots_min = 50, n_spots_max = 500, visium_mean = 20000, visium_sd = 7000, n_cells_min = 2, n_cells_max = 10, add_mock_region = FALSE, sc_rnaseq_path = NA, select_celltype = "random"){
 
   requireNamespace("dplyr")
   requireNamespace("Seurat")
@@ -1168,7 +1168,7 @@ generate_synthetic_visium = function(seurat_obj, dataset_type, clust_var, n_regi
 #' @export
 #'
 generate_synthetic_visium_lite = function(seurat_obj, clust_var, dataset_id = "1", n_spots = 500, visium_mean = 20000, visium_sd = 7000,
-                                          n_cells_min = 2, n_cells_max = 10, sc_rnaseq_path = NA, select_celltype = NULL){
+                                          n_cells_min = 2, n_cells_max = 10, sc_rnaseq_path = NA, select_celltype = "random"){
   
   requireNamespace("dplyr")
   requireNamespace("Seurat")
