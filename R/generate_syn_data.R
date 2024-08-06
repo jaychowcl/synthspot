@@ -904,9 +904,6 @@ region_assignment_to_syn_data = function(region_assignment_list, seurat_obj, clu
       
       region_assignments[paste0(region, "_mintest")] <- list(region_assignments_new_list)
       }
-        
-
-      }
     }
   }
   
