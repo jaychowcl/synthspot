@@ -1189,7 +1189,7 @@ generate_synthetic_visium = function(seurat_obj, dataset_type, clust_var, n_regi
   # input checks are implemented in the functions that are used here under the hood.
 
   region_assignment_list = make_region_celltype_assignment(seurat_obj = seurat_obj, clust_var = clust_var, n_regions = n_regions, dataset_type = dataset_type, region_var = region_var, dataset_id = dataset_id, n_spots_min = n_spots_min, n_spots_max = n_spots_max, select_celltype = select_celltype)
-  synthetic_visium_data = region_assignment_to_syn_data(region_assignment_list = region_assignment_list, seurat_obj = seurat_obj, clust_var = clust_var, visium_mean = visium_mean, visium_sd = visium_sd, n_cells_min = n_cells_min, n_cells_max = n_cells_max, add_mock_region = add_mock_region, , min_cell_id_test = min_cell_id_test, select_celltype_min_id = select_celltype_min_id)
+  synthetic_visium_data = region_assignment_to_syn_data(region_assignment_list = region_assignment_list, seurat_obj = seurat_obj, clust_var = clust_var, visium_mean = visium_mean, visium_sd = visium_sd, n_cells_min = n_cells_min, n_cells_max = n_cells_max, add_mock_region = add_mock_region, min_cell_id_test = min_cell_id_test, select_celltype_min_id = select_celltype_min_id)
   synthetic_visium_data$sc_rnaseq_path = sc_rnaseq_path
   return(synthetic_visium_data)
 
