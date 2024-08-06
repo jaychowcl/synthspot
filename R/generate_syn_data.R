@@ -150,6 +150,10 @@ make_region_celltype_assignment = function(seurat_obj, clust_var, n_regions, dat
     stop("number of regions should be smaller than number of different cell types!")
   }
 
+  ##################  vvv JAYCHOWCL vvv  ##################
+
+  ##################  ^^^ JAYCHOWCL ^^^  ##################
+
   # Generate the cell type frequencies per dataset type + return the properties of that dataset type
   if(dataset_type == "real"){ # for every region, we will dplyr::filter out the cells that belong to this region
 
@@ -785,6 +789,8 @@ make_region_celltype_assignment = function(seurat_obj, clust_var, n_regions, dat
 #' @param n_cells_min Integer indicating the minimum number of cells sampled per spot. Default: 2
 #' @param n_cells_max  Integer indicating the maximum number of cells sampled per spot. Default: 10
 #' @param add_mock_region If you want to make a "mock region" in addition to the other regions, set this parameter to TRUE. Mock region is recommended when the synthetic data will be used to evaluate spatial/region annotation of cells, not when evaluating deconvolution tools. Default: FALSE. The mock region is generated similar as the real regions, but the input cell type frequencies are the same for each cell type, and after generation of the counts, the gene names are shuffled such that cellular identities in this mockregion are lost.
+#' @param min_cell_id_test If you want to make spots with certain prior frequencies, pass on a float 0-1 to create a spot with that proportion of cells determined by select_celltype_min_id # jaychowcl
+#' @param select_celltype_min_id Selected celltype for min_cell_id_test # jaychowcl
 #'
 #' @return list with five sublists: \cr
 #' counts: count matrix of the synthetic visium data \cr
@@ -806,7 +812,7 @@ make_region_celltype_assignment = function(seurat_obj, clust_var, n_regions, dat
 #' @export
 #'
 region_assignment_to_syn_data = function(region_assignment_list, seurat_obj, clust_var, visium_mean = 20000, visium_sd = 7000,
-                                         n_cells_min = 2, n_cells_max = 10, add_mock_region = FALSE){
+                                         n_cells_min = 2, n_cells_max = 10, add_mock_region = FALSE, min_cell_id_test = 0, select_celltype_min_id = "T-cells"){
 
   requireNamespace("dplyr")
   requireNamespace("Seurat")
@@ -843,6 +849,71 @@ region_assignment_to_syn_data = function(region_assignment_list, seurat_obj, clu
   dataset_properties = region_assignment_list[["dataset_properties"]]
   real_dataset = dataset_properties$real_artificial == "real"
   gold_standard_priorregion = region_assignment_list[["gold_standard_priorregion"]]
+  
+  ##################  vvv JAYCHOWCL vvv  ##################
+  #Adding in spots of increasing cell density of a chosen celltype. Used for testing the minimum cell density for identification
+  
+  if(!is.numeric(min_cell_id_test)){
+    stop("min_cell_id_test should be a numeric vector")
+  }
+  if(!is.character(select_celltype_min_id)){
+    stop("select_celltype_min_id should be a character!")
+  }
+  
+  if(min_cell_id_test != 0){
+    for (densities in min_cell_id_test){
+      for(region in unique(gold_standard_priorregion$prior_region)){
+        region_freqs <- gold_standard_priorregion[gold_standard_priorregion$prior_region %in% region,]# pull table of region only
+        
+        if(region_freqs[region_freqs$celltype == select_celltype_min_id,]$present == TRUE){
+          region_freqs$prior_region <- paste0(region, "_", densities) #set names
+          
+          before_freq <- region_freqs[region_freqs$celltype == select_celltype_min_id,]$freq
+          change_freq <- abs(before_freq - densities)
+          
+          region_freqs[region_freqs$celltype == select_celltype_min_id,]$freq <- densities # change to densities
+          
+          #redistribute remaining freq to present == TRUE celltypes
+          present_celltypes_no <- sum(region_freqs$present) - 1
+          per_celltype_freq <- change_freq / present_celltypes_no
+          region_freqs[region_freqs$celltype != select_celltype_min_id & region_freqs$present == TRUE,]$freq <- region_freqs[region_freqs$celltype != select_celltype_min_id & region_freqs$present == TRUE,]$freq + per_celltype_freq
+          
+          #add to gold standard
+          gold_standard_priorregion <- rbind(gold_standard_priorregion, region_freqs)
+          #add to region_assignments
+          freqs <- setNames(region_freqs$freq, region_freqs$celltype)
+          spots_to_create <- 5
+          region_assignments_new_list <- list(n_spots = spots_to_create,
+                                              celltype_freq = freqs)
+          
+          region_assignments[paste0(region, "_mintest")] <- list(region_assignments_new_list)
+          
+          
+          
+        } else {
+          region_freqs$prior_region <- paste0(region, "_", densities)
+          region_freqs$freq <- region_freqs$freq*(1-densities)
+          region_freqs$freq[region_freqs$celltype == select_celltype_min_id] <- densities
+          region_freqs$present[region_freqs$celltype == select_celltype_min_id] <- TRUE
+          
+          gold_standard_priorregion <- rbind(gold_standard_priorregion, region_freqs)
+          
+          freqs <- setNames(region_freqs$freq, region_freqs$celltype)
+          spots_to_create <- 5
+          region_assignments_new_list <- list(n_spots = spots_to_create,
+                                              celltype_freq = freqs)
+        
+        region_assignments[paste0(region, "_mintest")] <- list(region_assignments_new_list)
+        }
+        
+
+      }
+    }
+  }
+  
+  
+  
+  ##################  ^^^ JAYCHOWCL ^^^  ##################
 
   seurat_obj$seurat_clusters_oi = droplevels(seurat_obj@meta.data[,clust_var] %>% as.factor())
   if(real_dataset == TRUE){
@@ -1114,7 +1185,7 @@ generate_spots = function(region_oi, region_assignments, seurat_obj, visium_mean
 #'
 #' @export
 #'
-generate_synthetic_visium = function(seurat_obj, dataset_type, clust_var, n_regions, region_var = NULL, dataset_id = "1", n_spots_min = 50, n_spots_max = 500, visium_mean = 20000, visium_sd = 7000, n_cells_min = 2, n_cells_max = 10, add_mock_region = FALSE, sc_rnaseq_path = NA, select_celltype = "random"){
+generate_synthetic_visium = function(seurat_obj, dataset_type, clust_var, n_regions, region_var = NULL, dataset_id = "1", n_spots_min = 50, n_spots_max = 500, visium_mean = 20000, visium_sd = 7000, n_cells_min = 2, n_cells_max = 10, add_mock_region = FALSE, sc_rnaseq_path = NA, select_celltype = "random", min_cell_id_test = 0, select_celltype_min_id = "T-cells"){
 
   requireNamespace("dplyr")
   requireNamespace("Seurat")
@@ -1122,8 +1193,7 @@ generate_synthetic_visium = function(seurat_obj, dataset_type, clust_var, n_regi
   # input checks are implemented in the functions that are used here under the hood.
 
   region_assignment_list = make_region_celltype_assignment(seurat_obj = seurat_obj, clust_var = clust_var, n_regions = n_regions, dataset_type = dataset_type, region_var = region_var, dataset_id = dataset_id, n_spots_min = n_spots_min, n_spots_max = n_spots_max, select_celltype = select_celltype)
-  synthetic_visium_data = region_assignment_to_syn_data(region_assignment_list = region_assignment_list, seurat_obj = seurat_obj, clust_var = clust_var, visium_mean = visium_mean, visium_sd = visium_sd,
-                                                        n_cells_min = n_cells_min, n_cells_max = n_cells_max, add_mock_region = add_mock_region)
+  synthetic_visium_data = region_assignment_to_syn_data(region_assignment_list = region_assignment_list, seurat_obj = seurat_obj, clust_var = clust_var, visium_mean = visium_mean, visium_sd = visium_sd, n_cells_min = n_cells_min, n_cells_max = n_cells_max, add_mock_region = add_mock_region, , min_cell_id_test = min_cell_id_test, select_celltype_min_id = select_celltype_min_id)
   synthetic_visium_data$sc_rnaseq_path = sc_rnaseq_path
   return(synthetic_visium_data)
 
