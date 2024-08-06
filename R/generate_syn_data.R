@@ -861,50 +861,49 @@ region_assignment_to_syn_data = function(region_assignment_list, seurat_obj, clu
   }
   
   if(min_cell_id_test != 0){
-    for (densities in min_cell_id_test){
-      for(region in unique(gold_standard_priorregion$prior_region)){
-        region_freqs <- gold_standard_priorregion[gold_standard_priorregion$prior_region %in% region,]# pull table of region only
+    for(region in unique(gold_standard_priorregion$prior_region)){
+      region_freqs <- gold_standard_priorregion[gold_standard_priorregion$prior_region %in% region,]# pull table of region only
+      
+      if(region_freqs[region_freqs$celltype == select_celltype_min_id,]$present == TRUE){
+        region_freqs$prior_region <- paste0(region, "_", min_cell_id_test) #set names
         
-        if(region_freqs[region_freqs$celltype == select_celltype_min_id,]$present == TRUE){
-          region_freqs$prior_region <- paste0(region, "_", densities) #set names
-          
-          before_freq <- region_freqs[region_freqs$celltype == select_celltype_min_id,]$freq
-          change_freq <- abs(before_freq - densities)
-          
-          region_freqs[region_freqs$celltype == select_celltype_min_id,]$freq <- densities # change to densities
-          
-          #redistribute remaining freq to present == TRUE celltypes
-          present_celltypes_no <- sum(region_freqs$present) - 1
-          per_celltype_freq <- change_freq / present_celltypes_no
-          region_freqs[region_freqs$celltype != select_celltype_min_id & region_freqs$present == TRUE,]$freq <- region_freqs[region_freqs$celltype != select_celltype_min_id & region_freqs$present == TRUE,]$freq + per_celltype_freq
-          
-          #add to gold standard
-          gold_standard_priorregion <- rbind(gold_standard_priorregion, region_freqs)
-          #add to region_assignments
-          freqs <- setNames(region_freqs$freq, region_freqs$celltype)
-          spots_to_create <- 5
-          region_assignments_new_list <- list(n_spots = spots_to_create,
-                                              celltype_freq = freqs)
-          
-          region_assignments[paste0(region, "_mintest")] <- list(region_assignments_new_list)
-          
-          
-          
-        } else {
-          region_freqs$prior_region <- paste0(region, "_", densities)
-          region_freqs$freq <- region_freqs$freq*(1-densities)
-          region_freqs$freq[region_freqs$celltype == select_celltype_min_id] <- densities
-          region_freqs$present[region_freqs$celltype == select_celltype_min_id] <- TRUE
-          
-          gold_standard_priorregion <- rbind(gold_standard_priorregion, region_freqs)
-          
-          freqs <- setNames(region_freqs$freq, region_freqs$celltype)
-          spots_to_create <- 5
-          region_assignments_new_list <- list(n_spots = spots_to_create,
-                                              celltype_freq = freqs)
+        before_freq <- region_freqs[region_freqs$celltype == select_celltype_min_id,]$freq
+        change_freq <- abs(before_freq - min_cell_id_test)
+        
+        region_freqs[region_freqs$celltype == select_celltype_min_id,]$freq <- min_cell_id_test # change to min_cell_id_test
+        
+        #redistribute remaining freq to present == TRUE celltypes
+        present_celltypes_no <- sum(region_freqs$present) - 1
+        per_celltype_freq <- change_freq / present_celltypes_no
+        region_freqs[region_freqs$celltype != select_celltype_min_id & region_freqs$present == TRUE,]$freq <- region_freqs[region_freqs$celltype != select_celltype_min_id & region_freqs$present == TRUE,]$freq + per_celltype_freq
+        
+        #add to gold standard
+        gold_standard_priorregion <- rbind(gold_standard_priorregion, region_freqs)
+        #add to region_assignments
+        freqs <- setNames(region_freqs$freq, region_freqs$celltype)
+        spots_to_create <- 5
+        region_assignments_new_list <- list(n_spots = spots_to_create,
+                                            celltype_freq = freqs)
         
         region_assignments[paste0(region, "_mintest")] <- list(region_assignments_new_list)
-        }
+        
+        
+        
+      } else {
+        region_freqs$prior_region <- paste0(region, "_", min_cell_id_test)
+        region_freqs$freq <- region_freqs$freq*(1-min_cell_id_test)
+        region_freqs$freq[region_freqs$celltype == select_celltype_min_id] <- min_cell_id_test
+        region_freqs$present[region_freqs$celltype == select_celltype_min_id] <- TRUE
+        
+        gold_standard_priorregion <- rbind(gold_standard_priorregion, region_freqs)
+        
+        freqs <- setNames(region_freqs$freq, region_freqs$celltype)
+        spots_to_create <- 5
+        region_assignments_new_list <- list(n_spots = spots_to_create,
+                                            celltype_freq = freqs)
+      
+      region_assignments[paste0(region, "_mintest")] <- list(region_assignments_new_list)
+      }
         
 
       }
