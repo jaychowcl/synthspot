@@ -7,3 +7,4 @@ This is a forked synthspot with:
 (See --help for added flags.)
 
 
+PLEASE SEE ORIGINAL SYNTHSPOT [here](https://github.com/saeyslab/synthspot)
