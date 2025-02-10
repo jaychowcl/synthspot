@@ -1,6 +1,6 @@
 # _synthspot_
 
-PLEASE SEE ORIGINAL SYNTHSPOT [here](https://github.com/saeyslab/synthspot)
+### PLEASE SEE ORIGINAL SYNTHSPOT [here](https://github.com/saeyslab/synthspot)
 
 This is a forked synthspot with:
 1. Updated Seuratv5 compatibility.
@@ -10,4 +10,4 @@ This is a forked synthspot with:
 (See --help for added flags.)
 
 
-PLEASE SEE ORIGINAL SYNTHSPOT [here](https://github.com/saeyslab/synthspot)
+### PLEASE SEE ORIGINAL SYNTHSPOT [here](https://github.com/saeyslab/synthspot)
